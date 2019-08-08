@@ -3497,9 +3497,16 @@ static EB_ERRORTYPE  CopyInputBuffer(
     dst->sliceType  = src->sliceType;
 
     // Copy the picture buffer
-    if(src->pBuffer != NULL)
-        return_error = CopyFrameBuffer(sequenceControlSet, dst->pBuffer, src->pBuffer);
-
+    if(src->pBuffer != NULL){
+        //return_error = CopyFrameBuffer(sequenceControlSet, dst->pBuffer, src->pBuffer);
+        EbPictureBufferDesc_t *inputPicturePtr = (EbPictureBufferDesc_t *) dst->pBuffer;
+        EB_H265_ENC_INPUT *inputPtr = (EB_H265_ENC_INPUT *) src->pBuffer;
+        inputPicturePtr->bufferY = (EB_BYTE)inputPtr->luma;
+        inputPicturePtr->bufferCb = (EB_BYTE)inputPtr->cb;
+        inputPicturePtr->bufferCr = (EB_BYTE)inputPtr->cr;
+        printf("\ncxh ---> copying frame, ffmpegptr = %ld, Hevcptr = %ld ", inputPtr, inputPicturePtr);
+    }
+    
     if (return_error != EB_ErrorNone)
         return return_error;
 
