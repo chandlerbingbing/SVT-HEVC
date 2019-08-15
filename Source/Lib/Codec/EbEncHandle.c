@@ -3498,13 +3498,35 @@ static EB_ERRORTYPE  CopyInputBuffer(
 
     // Copy the picture buffer
     if(src->pBuffer != NULL){
-        //return_error = CopyFrameBuffer(sequenceControlSet, dst->pBuffer, src->pBuffer);
-        EbPictureBufferDesc_t *inputPicturePtr = (EbPictureBufferDesc_t *) dst->pBuffer;
-        EB_H265_ENC_INPUT *inputPtr = (EB_H265_ENC_INPUT *) src->pBuffer;
-        inputPicturePtr->bufferY = (EB_BYTE)inputPtr->luma;
-        inputPicturePtr->bufferCb = (EB_BYTE)inputPtr->cb;
-        inputPicturePtr->bufferCr = (EB_BYTE)inputPtr->cr;
-        printf("\ncxh ---> copying frame, ffmpegptr = %ld, Hevcptr = %ld ", inputPtr, inputPicturePtr);
+
+        EB_H265_ENC_CONFIGURATION   *config = &sequenceControlSet->staticConfig;
+        EB_ERRORTYPE   return_error = EB_ErrorNone;
+        EbPictureBufferDesc_t           *inputPicturePtr = (EbPictureBufferDesc_t*)dst->pBuffer;
+        EB_H265_ENC_INPUT               *inputPtr = (EB_H265_ENC_INPUT*)src->pBuffer;
+        EB_BOOL                          is16BitInput = (EB_BOOL)(config->encoderBitDepth > EB_8BIT);
+        EB_U16                           colorFormat = (EB_U16)(config->encoderColorFormat);
+        EB_U16                           subWidthCMinus1 = (colorFormat == EB_YUV444 ? 1 : 2) - 1;
+        EB_U16                           subHeightCMinus1 = (colorFormat >= EB_YUV422 ? 1 : 2) - 1;
+        if(!is16BitInput){
+            inputPicturePtr->bufferY = (EB_BYTE)inputPtr->luma;
+            inputPicturePtr->bufferCb = (EB_BYTE)inputPtr->cb;
+            inputPicturePtr->bufferCr = (EB_BYTE)inputPtr->cr;
+            printf("\ncxh ---> copying frame, ffmpegptr = %ld, Hevcptr = %ld\n ", inputPtr, inputPicturePtr);
+        }else{
+            //TODO 10bits or other situation
+            printf("\n 10bits is not avalible for this version!\n");
+            return return_error = EB_ErrorUndefined;
+        }
+        if (inputPtr->dolbyVisionRpu.payloadSize) {
+            inputPicturePtr->dolbyVisionRpu.payloadSize = inputPtr->dolbyVisionRpu.payloadSize;
+            EB_MALLOC(EB_U8*, inputPicturePtr->dolbyVisionRpu.payload, inputPtr->dolbyVisionRpu.payloadSize, EB_N_PTR);
+            EB_MEMCPY(inputPicturePtr->dolbyVisionRpu.payload, inputPtr->dolbyVisionRpu.payload, inputPtr->dolbyVisionRpu.payloadSize);
+        }
+        else {
+            inputPicturePtr->dolbyVisionRpu.payloadSize = 0;
+            inputPicturePtr->dolbyVisionRpu.payload = NULL;
+        }
+        // return_error = CopyFrameBuffer(sequenceControlSet, dst->pBuffer, src->pBuffer);        
     }
     
     if (return_error != EB_ErrorNone)
